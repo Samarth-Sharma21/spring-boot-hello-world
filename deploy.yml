@@ -1,0 +1,58 @@
+---
+- name: Deploy Spring Boot App from S3 to EC2
+  hosts: webservers
+  become: yes
+
+  vars:
+    jar_name: spring-boot-hello-world-0.0.1-SNAPSHOT.jar
+    app_dir: /opt/app
+    s3_bucket: testingbucketforjenkins12345
+
+  tasks:
+    - name: Ensure app directory exists
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+
+    - name: Install Java 17 (Amazon Corretto)
+      yum:
+        name: java-17-amazon-corretto
+        state: present
+
+    - name: Download JAR from S3
+      shell: aws s3 cp s3://{{ s3_bucket }}/{{ jar_name }} {{ app_dir }}/{{ jar_name }}
+      args:
+        executable: /bin/bash
+
+    - name: Kill running Spring Boot app if exists
+      shell: pkill -f "{{ jar_name }}"
+      ignore_errors: yes
+
+    - name: Start Spring Boot app on port 8081
+      shell: nohup java -jar {{ app_dir }}/{{ jar_name }} --server.port=8081 > {{ app_dir }}/app.log 2>&1 &
+      async: 0
+      poll: 0
+
+    - name: Install nginx
+      yum:
+        name: nginx
+        state: present
+
+    - name: Configure nginx as reverse proxy
+      copy:
+        dest: /etc/nginx/conf.d/springboot.conf
+        content: |
+          server {
+              listen 80;
+              location / {
+                  proxy_pass http://localhost:8081/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+              }
+          }
+
+    - name: Start and enable nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
