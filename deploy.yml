@@ -43,9 +43,12 @@
       poll: 0
 
     - name: Start Spring Boot app on port 8081
-      shell: nohup java -jar {{ app_dir }}/{{ jar_name }} --server.port=8081 > {{ app_dir }}/app.log 2>&1 &
-      async: 0
+      shell: java -jar {{ app_dir }}/{{ jar_name }} --server.port=8081 > {{ app_dir }}/app.log 2>&1
+      args:
+        chdir: "{{ app_dir }}"
+      async: 30
       poll: 0
+
 
     - name: Install nginx
       apt:
