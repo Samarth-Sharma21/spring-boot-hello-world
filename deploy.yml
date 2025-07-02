@@ -21,11 +21,11 @@
         state: present
         update_cache: yes
 
-    - name: Install AWS CLI
-      apt:
-        name: awscli
-        state: present
-        update_cache: yes
+    # - name: Install AWS CLI
+    #   apt:
+    #     name: awscli
+    #     state: present
+    #     update_cache: yes
 
     - name: Download JAR from S3
       shell: aws s3 cp s3://{{ s3_bucket }}/{{ jar_name }} {{ app_dir }}/{{ jar_name }} --region {{ aws_region }}
