@@ -4,9 +4,10 @@
   become: yes
 
   vars:
-    jar_name: spring-boot-hello-world-0.0.1-SNAPSHOT.jar
     app_dir: /opt/app
-    s3_bucket: testingbucketforjenkins12345
+    jar_name: ""
+    s3_bucket: ""
+    aws_region: "us-east-1"
 
   tasks:
     - name: Ensure app directory exists
@@ -20,7 +21,7 @@
         state: present
 
     - name: Download JAR from S3
-      shell: aws s3 cp s3://{{ s3_bucket }}/{{ jar_name }} {{ app_dir }}/{{ jar_name }}
+      shell: aws s3 cp s3://{{ s3_bucket }}/{{ jar_name }} {{ app_dir }}/{{ jar_name }} --region {{ aws_region }}
       args:
         executable: /bin/bash
 
@@ -51,8 +52,8 @@
               }
           }
 
-    - name: Start and enable nginx
+    - name: Reload nginx to apply new config
       service:
         name: nginx
-        state: started
+        state: restarted
         enabled: yes
