@@ -1,5 +1,5 @@
 ---
-- name: Deploy Spring Boot App from S3 to EC2
+- name: Deploy Spring Boot App from S3 to EC2 (Ubuntu)
   hosts: webservers
   become: yes
 
@@ -15,10 +15,17 @@
         path: "{{ app_dir }}"
         state: directory
 
-    - name: Install Java 17 (Amazon Corretto)
-      yum:
-        name: java-17-amazon-corretto
+    - name: Install Java 17 (OpenJDK)
+      apt:
+        name: openjdk-17-jdk
         state: present
+        update_cache: yes
+
+    - name: Install AWS CLI
+      apt:
+        name: awscli
+        state: present
+        update_cache: yes
 
     - name: Download JAR from S3
       shell: aws s3 cp s3://{{ s3_bucket }}/{{ jar_name }} {{ app_dir }}/{{ jar_name }} --region {{ aws_region }}
@@ -35,13 +42,14 @@
       poll: 0
 
     - name: Install nginx
-      yum:
+      apt:
         name: nginx
         state: present
+        update_cache: yes
 
     - name: Configure nginx as reverse proxy
       copy:
-        dest: /etc/nginx/conf.d/springboot.conf
+        dest: /etc/nginx/sites-available/springboot
         content: |
           server {
               listen 80;
@@ -51,6 +59,19 @@
                   proxy_set_header X-Real-IP $remote_addr;
               }
           }
+
+    - name: Enable nginx config
+      file:
+        src: /etc/nginx/sites-available/springboot
+        dest: /etc/nginx/sites-enabled/springboot
+        state: link
+        force: yes
+
+    - name: Remove default nginx config if exists
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+        force: yes
 
     - name: Reload nginx to apply new config
       service:
