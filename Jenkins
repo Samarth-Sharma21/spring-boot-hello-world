@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'
+        S3_BUCKET = 'testingbucketforjenkins12345'
+        JAR_NAME = 'spring-boot-hello-world-0.0.1-SNAPSHOT.jar' // update if needed
+        EC2_IP = 'YOUR.EC2.PUBLIC.IP.HERE' // replace with your new EC2 IP
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Samarth-Sharma21/spring-boot-hello-world.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Upload to S3') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-s3-creds'
+                ]]) {
+                    sh '''
+                        echo "Uploading JAR to S3..."
+                        aws s3 cp target/$JAR_NAME s3://$S3_BUCKET/ --region $AWS_REGION --quiet
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy with Ansible') {
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'ec2-ssh-creds', keyFileVariable: 'SSH_KEY')
+                ]) {
+                    sh '''
+                        echo "[webservers]" > inventory.ini
+                        echo "ubuntu@${EC2_IP} ansible_ssh_private_key_file=${SSH_KEY} ansible_user=ubuntu" >> inventory.ini
+
+                        ansible-playbook -i inventory.ini deploy.yml
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+        }
+    }
+}
