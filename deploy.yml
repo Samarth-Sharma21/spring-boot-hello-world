@@ -37,8 +37,10 @@
 
 
     - name: Kill running Spring Boot app if exists
-      shell: pkill -f "{{ jar_name }}"
+      shell: pkill -f "{{ jar_name }}" || true
       ignore_errors: yes
+      async: 10
+      poll: 0
 
     - name: Start Spring Boot app on port 8081
       shell: nohup java -jar {{ app_dir }}/{{ jar_name }} --server.port=8081 > {{ app_dir }}/app.log 2>&1 &
