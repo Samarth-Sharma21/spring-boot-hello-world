@@ -33,7 +33,7 @@
       notify: Reload Nginx
 
     - name: Download jar from S3
-      shell: aws s3 cp s3://testingbucketforjenkins12345/spring-boot-app.jar /home/ubuntu/app.jar
+      shell: aws s3 cp s3://testingbucketforjenkins12345/spring-boot-2-hello-world-1.0.2-SNAPSHOT.jar /home/ubuntu/app.jar
 
     - name: Kill old app
       shell: pkill -f 'java -jar' || true
